@@ -1,18 +1,18 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-if __name__ == "__main__":
+def main():
+
     # 1. load data in df
     in_file_path = "~/bda602/hw/iris.data"
 
-    # read .names file to get column names of data
-    # with open(in_file_path + "iris.names") as f:
-    #     print(f.read())
+    # read data based on column names
 
     df = pd.read_csv(
         in_file_path,
@@ -114,16 +114,34 @@ if __name__ == "__main__":
     rfc = RandomForestClassifier(random_state=50)
     rfc.fit(X_train, y_train)
 
+    # support vector machine SVC classifier
+    clf = svm.SVC()
+    clf.fit(X_train, y_train)
+
     # 5.Wrap the steps into a pipeline
-    pipe = Pipeline(
+    pipe_random_f = Pipeline(
         [("scaler", StandardScaler()), ("rfc", RandomForestClassifier(random_state=50))]
     )
-    pipe.fit(X_train, y_train)
+    pipe_random_f.fit(X_train, y_train)
     Pipeline(
         steps=[
             ("scaler", StandardScaler()),
             ("rfc", RandomForestClassifier(random_state=50)),
         ]
     )
-    print(pipe.score(X_test, y_test))
+    pipe_svc = Pipeline([("scaler", StandardScaler()), ("clf", svm.SVC())])
+    pipe_svc.fit(X_train, y_train)
+    Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            ("clf", svm.SVC()),
+        ]
+    )
+    print("Accuracy of random forest:", (pipe_random_f.score(X_test, y_test)))
+    print("Accuracy of support vector machine:", (pipe_svc.score(X_test, y_test)))
+
+
+if __name__ == "__main__":
+    main()
+
 
