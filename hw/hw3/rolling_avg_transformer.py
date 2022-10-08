@@ -26,12 +26,14 @@ class RollingAverageTransform(
         return self._set(**kwargs)
 
     def _transform(self, dataset):
+        input_col = self.getInputCols()
+        output_col = self.getOutputCol()
+
         # Create a WindowSpec for 100 day window
         winSpec = (
             Window()
-            .partitionBy(F.col("batter"))
+            .partitionBy(input_col[0])
             .orderBy("local_date_to_Unix")
-            .rangeBetween(-100 * 86400, Window.currentRow)
             .rangeBetween(-99 * 86400, Window.currentRow)
         )
 
@@ -39,14 +41,15 @@ class RollingAverageTransform(
             dataset
             # need to convert local_date to Unix Timestamp for Window time frame
             .withColumn(
-                "local_date_to_Unix", F.unix_timestamp("local_date", "yyyy-MM-dd")
+                "local_date_to_Unix", F.unix_timestamp(input_col[3], "yyyy-MM-dd")
             ).withColumn(
-                "batting_avg_over_last_100days",
-                F.sum("hit").over(winSpec) / F.sum("atBat").over(winSpec),
+                output_col,
+                F.sum(input_col[1]).over(winSpec) / F.sum(input_col[2]).over(winSpec),
             )
         )
 
         # drop local_date_to_Unix
         dataset2 = dataset2.drop("local_date_to_Unix")
+        dataset2.na.drop()
 
         return dataset2
