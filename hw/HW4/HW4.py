@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 rootpath = os.path.dirname(sys.argv[0])
-urlpath = "github/url"
+urlpath = "https://nia-fan.github.io/plots"
 
 
 def check_distinct(df, col):
@@ -241,7 +241,7 @@ def calculate_stats(
         )
 
         data_dic["t-score"] = "%s/linear_regres_%s_plot.html" % (urlpath, feature_name)
-        data_dic["p-value"] = p_value
+        data_dic["p-value"] = "%s/linear_regres_%s_plot.html" % (urlpath, feature_name)
 
     # Logistic Regression: Boolean response
     elif resp_type == "cat":
@@ -250,9 +250,6 @@ def calculate_stats(
         # print(log_reg.summary())
         t_value2 = log_reg.tvalues[1]
         p_value2 = log_reg.pvalues[1]
-
-        data_dic["t-score"] = t_value2
-        data_dic["p-value"] = p_value2
 
         # Plot the figure
         fig2 = px.scatter(x=pred_value, y=df[response_name].values, trendline="ols")
@@ -269,7 +266,7 @@ def calculate_stats(
         )
 
         data_dic["t-score"] = "%s/scatter_%s_plot.html" % (urlpath, feature_name)
-        data_dic["p-value"] = p_value2
+        data_dic["p-value"] = "%s/scatter_%s_plot.html" % (urlpath, feature_name)
 
 
 def plot_MWR_unweighted(res_value, pred_value, feature_name, data_dic, df):
