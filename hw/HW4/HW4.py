@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 rootpath = os.path.dirname(sys.argv[0])
+urlpath = "github/url"
 
 
 def check_distinct(df, col):
@@ -23,15 +24,16 @@ def check_distinct(df, col):
     return len(unique)
 
 
-def determin_type(df, col):
+def determine_type(df, col):
     col_type = df[col].dtype
-    if col_type == "object":
-        # Converting Categorical Data Columns to Numerical
+    if col_type == "object" or col_type == "bool":
+        # Convert Categorical Data Columns to Numerical
         le = LabelEncoder()
         label_encd = le.fit_transform(df[col])
         df[col] = label_encd
         return "cat"
     else:
+        # check distinct values
         len_dist = check_distinct(df, col)
         if len_dist / len(df) < 0.05:
             return "cat"
@@ -56,14 +58,16 @@ def plot(resp_type, predi_type, res_value, pred_value, feature_name, data_dic):
                 yaxis_title="Predictor %s" % feature_name,
             )
             # fig_cat.show()
+
             fig_cat.write_html(
                 file="%s/plots/cat_resp_cat_pred_%s_heatmap_plot.html"
                 % (rootpath, feature_name),
                 include_plotlyjs="cdn",
             )
 
-            data_dic["plot"] = (
-                "url/cat_resp_cat_pred_%s_heatmap_plot.html" % feature_name
+            data_dic["plot"] = "%s/cat_resp_cat_pred_%s_heatmap_plot.html" % (
+                urlpath,
+                feature_name,
             )
 
         # Categorical Response vs Continuous Predictor
@@ -89,13 +93,17 @@ def plot(resp_type, predi_type, res_value, pred_value, feature_name, data_dic):
                 yaxis_title="Predictor %s" % feature_name,
             )
             # fig_violin.show()
+
             fig_violin.write_html(
                 file="%s/plots/cat_resp_cont_pre_%s_violin_plot.html"
                 % (rootpath, feature_name),
                 include_plotlyjs="cdn",
             )
-            data_dic["plot"] = (
-                "url/cat_resp_cont_pre_%s_violin_plot.html" % feature_name
+
+            # this case has two plots
+            plot_url = "%s/cat_resp_cont_pre_%s_violin_plot.html" % (
+                urlpath,
+                feature_name,
             )
 
             # distribution plot
@@ -112,7 +120,13 @@ def plot(resp_type, predi_type, res_value, pred_value, feature_name, data_dic):
                 % (rootpath, feature_name),
                 include_plotlyjs="cdn",
             )
-            # data_dic["plot"] = "url/cat_resp_cont_pre_%s_dist_plot.html" % feature_name
+
+            plot_url = (
+                plot_url
+                + " , "
+                + "%s/cat_resp_cont_pre_%s_dist_plot.html" % (urlpath, feature_name)
+            )
+            data_dic["plot"] = plot_url
     else:
         # Continuous Response vs Categorical Predictor
         if predi_type == "cat":
@@ -141,7 +155,10 @@ def plot(resp_type, predi_type, res_value, pred_value, feature_name, data_dic):
                     % (rootpath, feature_name),
                     include_plotlyjs="cdn",
                 )
-                # data_dic["plot"] = "url/cont_resp_cat_pre_%s_violin_plot.html" % feature_name
+                plot_url2 = "%s/cont_resp_cat_pre_%s_violin_plot.html" % (
+                    urlpath,
+                    feature_name,
+                )
 
                 # Create distribution plot
                 fig_dis_2 = ff.create_distplot(
@@ -159,8 +176,11 @@ def plot(resp_type, predi_type, res_value, pred_value, feature_name, data_dic):
                     % (rootpath, feature_name),
                     include_plotlyjs="cdn",
                 )
-                data_dic["plot"] = (
-                    "url/cat_resp_cont_pre_%s_dist_plot.html" % feature_name
+
+                plot_url2 = (
+                    plot_url2
+                    + " , "
+                    + "%s/cat_resp_cont_pre_%s_dist_plot.html" % (urlpath, feature_name)
                 )
 
         # Continuous Response vs Continuous Predictor
@@ -182,8 +202,9 @@ def plot(resp_type, predi_type, res_value, pred_value, feature_name, data_dic):
                 include_plotlyjs="cdn",
             )
 
-            data_dic["plot"] = (
-                "url/cont_resp_cont_pre_%s_scatter_plot.html" % feature_name
+            data_dic["plot"] = "%s/cont_resp_cont_pre_%s_scatter_plot.html" % (
+                urlpath,
+                feature_name,
             )
 
 
@@ -199,7 +220,7 @@ def calculate_stats(
         # fit linear regression model
         linear_regres_modal = statsmodels.api.OLS(res_value, x)
         linear_regres_modal_fit = linear_regres_modal.fit()
-        print(linear_regres_modal_fit.summary())
+        # print(linear_regres_modal_fit.summary())
 
         # Get the stats
         t_value = round(linear_regres_modal_fit.tvalues[1], 6)
@@ -219,15 +240,14 @@ def calculate_stats(
             include_plotlyjs="cdn",
         )
 
-        data_dic["t-score"] = "url/linear_regres_%s_plot.html" % feature_name
+        data_dic["t-score"] = "%s/linear_regres_%s_plot.html" % (urlpath, feature_name)
         data_dic["p-value"] = p_value
 
     # Logistic Regression: Boolean response
     elif resp_type == "cat":
         log_reg = smf.logit("%s ~ %s" % (response_name, feature_name), data=df).fit()
 
-        # Summary of results
-        print(log_reg.summary())
+        # print(log_reg.summary())
         t_value2 = log_reg.tvalues[1]
         p_value2 = log_reg.pvalues[1]
 
@@ -248,11 +268,11 @@ def calculate_stats(
             include_plotlyjs="cdn",
         )
 
-        data_dic["t-score"] = "url/scatter_%s_plot.html" % feature_name
+        data_dic["t-score"] = "%s/scatter_%s_plot.html" % (urlpath, feature_name)
         data_dic["p-value"] = p_value2
 
 
-def cal_MWR_unweighted(res_value, pred_value, feature_name, data_dic, df):
+def plot_MWR_unweighted(res_value, pred_value, feature_name, data_dic, df):
     diff = [(pred_value[i] - res_value[i]) for i in range(len(pred_value))]
     diff_list = np.array(diff)
 
@@ -277,76 +297,98 @@ def cal_MWR_unweighted(res_value, pred_value, feature_name, data_dic, df):
         secondary_y=True,
     )
 
-    # Set y-axes titles
+    # Set titles
     fig_mwr.update_yaxes(title_text="Response", secondary_y=False)
     fig_mwr.update_yaxes(title_text="Population", secondary_y=True)
 
     fig_mwr.update_layout(
-        title="Binned Difference with Mean of Response vs Bin",
+        title="Binned Difference with Mean of Response vs Bin Unweighted (%s)"
+        % feature_name,
         barmode="group",
         bargap=0.30,
         bargroupgap=0.0,
     )
+
+    fig_mwr.add_annotation(
+        dict(
+            x=0.5,
+            y=-0.06,
+            showarrow=False,
+            text="Predictor Bin",
+            xref="paper",
+            yref="paper",
+        )
+    )
+
     # fig_mwr.show()
     fig_mwr.write_html(
         file="%s/plots/MWR_unw_%s_plot.html" % (rootpath, feature_name),
         include_plotlyjs="cdn",
     )
 
-    data_dic["MWR Unweighted"] = "url/MWR_unw_%s_plot.html" % feature_name
+    data_dic["MWR Unweighted"] = "%s/MWR_unw_%s_plot.html" % (urlpath, feature_name)
 
 
-def cal_MWR_weighted(res_value, pred_value, feature_name, data_dic, df):
-    weight = np.empty(len(df))
-    weight.fill(1 / len(pred_value))
-
+def plot_MWR_weighted(res_value, pred_value, feature_name, data_dic, df):
     diff = [(pred_value[i] - res_value[i]) for i in range(len(pred_value))]
     diff_list = np.array(diff)
 
-    diff_list_weighted = [a * b for a, b in zip(weight, diff_list)]
+    steps = np.linspace(np.percentile(pred_value, 5), np.percentile(pred_value, 96), 8)
+    np.insert(steps, 0, np.percentile(pred_value, 6))
+    np.append(steps, np.percentile(pred_value, 95))
+    bins = steps
 
-    max = np.max(pred_value)
-    min = np.min(pred_value)
-    bins = np.linspace(min, max, 10)
-
-    df["bin"] = pd.cut(diff_list_weighted, bins)
+    df["bin"] = pd.cut(diff_list, bins)
     agg_df = df.groupby(by="bin").mean()
     mids = pd.IntervalIndex(agg_df.index.get_level_values("bin")).mid
 
-    fig_mwr = go.Figure()
-    fig_mwr = make_subplots(specs=[[{"secondary_y": True}]])
+    fig_mwr_w = go.Figure()
+    fig_mwr_w = make_subplots(specs=[[{"secondary_y": True}]])
 
-    fig_mwr.add_trace(go.Histogram(x=pred_value, name="Population"))
-    fig_mwr.add_trace(
+    fig_mwr_w.add_trace(go.Histogram(x=pred_value, name="Population"))
+    fig_mwr_w.add_trace(
         go.Scatter(x=bins, y=res_value, mode="lines", line_color="green", name="μpop"),
         secondary_y=False,
     )
-    fig_mwr.add_trace(
+    fig_mwr_w.add_trace(
         go.Scatter(x=bins, y=mids, mode="lines", line_color="red", name="μi−μpop"),
         secondary_y=True,
     )
 
     # Set y-axes titles
-    fig_mwr.update_yaxes(title_text="Response", secondary_y=False)
-    fig_mwr.update_yaxes(title_text="Population", secondary_y=True)
+    fig_mwr_w.update_yaxes(title_text="Response", secondary_y=False)
+    fig_mwr_w.update_yaxes(title_text="Population", secondary_y=True)
 
-    fig_mwr.update_layout(
-        title="Binned Difference with Mean of Response vs Bin",
+    fig_mwr_w.update_layout(
+        title="Binned Difference with Mean of Response vs Bin Weighted (%s)"
+        % feature_name,
         barmode="group",
         bargap=0.30,
         bargroupgap=0.0,
     )
-    # fig.show()
-    # fig_mwr.write_html(
-    #     file="%s/plots/MWR_wt_%s_plot.html" % (rootpath, feature_name),
-    #     include_plotlyjs="cdn",
-    # )
 
-    data_dic["MWR Weighted"] = "url/MWR_wt_%s_plot.html" % feature_name
+    fig_mwr_w.add_annotation(
+        dict(
+            x=0.5,
+            y=-0.06,
+            showarrow=False,
+            text="Predictor Bin",
+            xref="paper",
+            yref="paper",
+        )
+    )
+    # fig_mwr_w.show()
+
+    fig_mwr_w.write_html(
+        file="%s/plots/MWR_wt_%s_plot.html" % (rootpath, feature_name),
+        include_plotlyjs="cdn",
+    )
+
+    data_dic["MWR Weighted"] = "%s/MWR_wt_%s_plot.html" % (urlpath, feature_name)
 
 
 def random_forest_ranking(df_pred_cont):
-    # Create training and test split
+    # Create training and test splits
     X_train, X_test, y_train, y_test = train_test_split(
         df_pred_cont.iloc[:, 1:], df_pred_cont.iloc[:, 0], test_size=0.3, random_state=1
     )
@@ -378,7 +420,11 @@ def random_forest_ranking(df_pred_cont):
 
 
 def main():
-    # 1. get data from sklearn datasets
+    # make a plots folder if it does not exist
+    if not os.path.exists(rootpath + "/plots"):
+        os.makedirs(rootpath + "/plots")
+
+    # 1. get data from sklearn dtasets
     df = pd.read_csv(
         "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/titanic.csv"
     )
@@ -388,7 +434,7 @@ def main():
     Predicator_col = [x for x in df.columns if x != "survived"]
 
     # 2. check response type
-    resp_type = determin_type(df, response_col)
+    resp_type = determine_type(df, response_col)
     response_name = ""
     if resp_type == "cat":
         response_name = "Response (boolean)"
@@ -405,7 +451,7 @@ def main():
         data_dic[response_name] = response_col
 
         # determine predictor column type
-        predi_type = determin_type(df, column)
+        predi_type = determine_type(df, column)
         pre_name = ""
         if predi_type == "cat":
             pre_name = "%s (cat)" % column
@@ -425,7 +471,7 @@ def main():
             data_dic,
         )
 
-        # calculate p-values and t-score (continuous predictors only)
+        # calculate p-values and t-scores (continuous predictors only)
         if predi_type == "cont":
             calculate_stats(
                 resp_type,
@@ -441,10 +487,10 @@ def main():
             data_dic["p-value"] = "N/A"
 
         # Difference with mean of response along with its plot (weighted and unweighted)
-        cal_MWR_unweighted(
+        plot_MWR_unweighted(
             df[response_col].values, df[column].values, column, data_dic, df
         )
-        cal_MWR_weighted(
+        plot_MWR_weighted(
             df[response_col].values, df[column].values, column, data_dic, df
         )
 
@@ -456,10 +502,11 @@ def main():
 
     # set RF VarImp in results_data
     for item in results_data:
-        item["RF VarImp"] = "url/plots/rf_feature_importance.html"
+        item["RF VarImp"] = "%s/plots/rf_feature_importance.html" % (urlpath)
 
     result_df = pd.DataFrame.from_dict(results_data)
 
+    # add response and predictor info
     index = len(result_df.index)
     result_df.loc[index + 1] = ["", "", "df", "", "", "", "", ""]
     result_df.loc[index + 2] = ["", "", "response=survived", "", "", "", "", ""]
@@ -475,8 +522,18 @@ def main():
         "",
     ]
     HTML(result_df.to_html(escape=False))
+    # HTML(result_df.to_html(classes='table table-stripped', escape=False, render_links=True))
 
-    result_df.to_csv("%s/result.csv" % (rootpath), index=None, header=True)
+    result_df.to_csv("%s/report.csv" % (rootpath), index=None, header=True)
+
+    # write html to file
+    result_df.to_html(
+        "%s/report.html" % (rootpath),
+        classes="table table-striped",
+        escape=False,
+        render_links=True,
+    )
+    print(result_df.head())
 
     return
 
