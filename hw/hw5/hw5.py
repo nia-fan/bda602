@@ -2,6 +2,7 @@ import os
 import sys
 import webbrowser
 
+import calculate_correlation as calculate_correlation
 import findspark
 import numpy as np
 import pandas as pd
@@ -13,18 +14,25 @@ from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 from pyspark import StorageLevel
 from pyspark.sql import SparkSession
-from scipy import stats
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.linear_model import ElasticNet, LinearRegression, Ridge
+from sklearn.linear_model import ElasticNet, LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-# findspark.init()
-findspark.init("/Users/nia/Spark/spark-3.3.0-bin-hadoop3", edit_rc=True)
-
+findspark.init()
+# use below line and change path if path needed for spark
+# findspark.init("/Users/nia/Spark/spark-3.3.0-bin-hadoop3", edit_rc=True)
 rootpath = os.path.dirname(sys.argv[0])
 urlpath = "%s/plots/" % (rootpath)
+
+
+def determin_type(df, col):
+    col_type = df[col].dtype
+    if col_type == "object" or col_type == "bool":
+        return "cat"
+    else:
+        return "cont"
 
 
 def plot(df, pred_col, data_dic, response_col, resp_type):
@@ -39,6 +47,7 @@ def plot(df, pred_col, data_dic, response_col, resp_type):
             xaxis_title="Predictor %s" % pred_col,
             yaxis_title="Response",
         )
+        # fig_scatt.show()
 
         fig_scatt.write_html(
             file="%s/plots/cont_resp_cont_pre_%s_scatter_plot.html"
@@ -88,6 +97,7 @@ def plot(df, pred_col, data_dic, response_col, resp_type):
         hlist = df[df[response_col] == "H"][pred_col].values
         alist = df[df[response_col] == "A"][pred_col].values
         hist_data = [hlist, alist]
+        # print(hist_data)
 
         fig_dist = ff.create_distplot(hist_data, group_labels, bin_size=0.2)
         fig_dist.update_layout(
@@ -273,7 +283,7 @@ def random_forest_ranking(df2, pred_cols, response_col):
     return importances
 
 
-def feature_analy_plot_ranking(df, predicator_cols, response_col, resp_type):
+def feature_analy_plot_ranking(df, predictor_cols, response_col, resp_type):
     df2 = df.copy()
 
     # convert response to numeric
@@ -284,7 +294,7 @@ def feature_analy_plot_ranking(df, predicator_cols, response_col, resp_type):
 
     # define result data list
     results_data = []
-    for column in predicator_cols:
+    for column in predictor_cols:
         data_dic = {}
         data_dic["Response"] = response_col
         data_dic["Predictor"] = column
@@ -295,7 +305,7 @@ def feature_analy_plot_ranking(df, predicator_cols, response_col, resp_type):
 
         results_data.append(data_dic)
 
-    rf_list = random_forest_ranking(df2, predicator_cols, response_col)
+    rf_list = random_forest_ranking(df2, predictor_cols, response_col)
     index = 0
     for item in results_data:
         item["RF VarImp"] = rf_list[index]
@@ -318,12 +328,11 @@ def cal_cont_cont_corre(pred_cont_df):
                 )
                 x = pred_cont_df.iloc[:, index]
                 y = pred_cont_df.iloc[:, index2]
-                r, p_value = stats.pearsonr(x, y)
+
+                r, t_value, p_value = calculate_correlation.cont_cont_correlation(x, y)
                 cont_cont_dic["Predictors"] = pair_name
                 cont_cont_dic["Pearson's r"] = r
                 cont_cont_dic["Absolute Value of Correlation"] = abs(r)
-
-                t_value, p = stats.ttest_rel(x, y)
 
                 # Plot the figure
                 fig = px.scatter(x=x, y=y, trendline="ols")
@@ -361,9 +370,9 @@ def cal_cont_cont_corre(pred_cont_df):
     return cont_cont_df
 
 
-def cal_cont_cont_mwr(df, predicator_cols, response_col, resp_type):
+def cal_cont_cont_mwr(df, predictor_cols, response_col, resp_type):
     cont_cont_mwr_list = []
-    col = predicator_cols[:]
+    col = predictor_cols[:]
     col.append(response_col)
     # filter only related columns
     df_filter = df.filter(items=col)
@@ -375,15 +384,15 @@ def cal_cont_cont_mwr(df, predicator_cols, response_col, resp_type):
     resp_count = df_filter[response_col].count()
     resp_mean = df_filter[response_col].mean()
 
-    for index in range(len(predicator_cols)):
+    for index in range(len(predictor_cols)):
         bin_num = 5
-        c1 = predicator_cols[index]
+        c1 = predictor_cols[index]
 
         index2 = index + 1
-        if index2 < len(predicator_cols):
-            for index2 in range(index2, len(predicator_cols)):
+        if index2 < len(predictor_cols):
+            for index2 in range(index2, len(predictor_cols)):
                 cont_wmr_dic = {}
-                c2 = predicator_cols[index2]
+                c2 = predictor_cols[index2]
 
                 pair_name = c1 + " and " + c2
                 df_mean = (
@@ -535,8 +544,8 @@ def cal_cont_cont_mwr(df, predicator_cols, response_col, resp_type):
     return cont_cont_mwru_df
 
 
-def feature_analy_Correl_BF(df, predicator_cols, response_col, resp_type):
-    pred_cont_df = df.filter(items=predicator_cols)
+def feature_analy_Correl_BF(df, predictor_cols, response_col, resp_type):
+    pred_cont_df = df.filter(items=predictor_cols)
     cont_cont_corr_df = cal_cont_cont_corre(pred_cont_df)
     # correlation matrix
     cont_cont_corr_matrix = pred_cont_df.corr()
@@ -558,13 +567,13 @@ def feature_analy_Correl_BF(df, predicator_cols, response_col, resp_type):
     cont_cont_cm_plot = "%s/plots/corr_matrix_cont_cont.html" % (rootpath)
 
     # brute force table
-    cont_cont_mwr_df = cal_cont_cont_mwr(df, predicator_cols, response_col, resp_type)
+    cont_cont_mwr_df = cal_cont_cont_mwr(df, predictor_cols, response_col, resp_type)
 
     return (cont_cont_corr_df, cont_cont_cm_plot, cont_cont_mwr_df)
 
 
-def create_report(pr_df, df1, cm1, mwrdf1, predicator_cols, response_col):
-    pred_str = ",".join(str(x) for x in predicator_cols)
+def create_report(pr_df, df1, cm1, mwrdf1, predictor_cols, response_col):
+    pred_str = ",".join(str(x) for x in predictor_cols)
     html_template = """<html>
         <head>
         <title>report</title>
@@ -672,20 +681,6 @@ def model_compare(df, pred_col, response_col, resp_type):
     print("Test data RMSE", np.sqrt(mean_squared_error(y_test, pred_test_rfr)))
     print("Test data R-squared", r2_score(y_test, pred_test_rfr))
 
-    # Ridge Regression
-    model_rdg = Ridge()
-    model_rdg.fit(X_train, y_train)
-    model_rdg.score(X_train, y_train)
-
-    pred_train_rdg = model_rdg.predict(X_train)
-    print("Ridge Regression")
-    print("Training data RMSE", np.sqrt(mean_squared_error(y_train, pred_train_rdg)))
-    print("Training data R-squared", r2_score(y_train, pred_train_rdg))
-
-    pred_test_rdg = model_rdg.predict(X_test)
-    print("Test data RMSE", np.sqrt(mean_squared_error(y_test, pred_test_rdg)))
-    print("Test data R-squared", r2_score(y_test, pred_test_rdg))
-
     # Elastic Net
     model_enet = ElasticNet()
     model_enet.fit(X_train, y_train)
@@ -698,23 +693,18 @@ def model_compare(df, pred_col, response_col, resp_type):
     print("Test data RMSE", np.sqrt(mean_squared_error(y_test, pred_test_enet)))
     print("Test data R-squared", r2_score(y_test, pred_test_enet))
 
+    # result:
     # Linear Regression
-    # Training data RMSE 0.4208610580524354
-    # Training data R-squared 0.2848073631164799
-    # Test data RMSE 0.42139508035510664
-    # Test data R-squared 0.28522101880849793
+    # Training data RMSE 0.4251719568009885
+    # Training data R-squared 0.2700808244261864
+    # Test data RMSE 0.42610602753210913
+    # Test data R-squared 0.26915007582783257
 
     # Random Forest Regression
-    # Training data RMSE 0.145039260392573
-    # Training data R-squared: 0.9150591305267103
-    # Test data RMSE 0.3939018413980738
-    # Test data R-squared 0.3754476121968725
-
-    # Ridge Regression
-    # Training data RMSE 0.4208610583071266
-    # Training data R-squared 0.2848073622508581
-    # Test data RMSE 0.4213954307919735
-    # Test data R-squared 0.28521982997159634
+    # Training data RMSE 0.1421879483464298
+    # Training data R-squared: 0.9183659910371024
+    # Test data RMSE 0.37460969170646413
+    # Test data R-squared 0.43512693183904405
 
     # ElasticNet Regression
     # Training data RMSE 0.4788829492105223
@@ -722,9 +712,9 @@ def model_compare(df, pred_col, response_col, resp_type):
     # Test data RMSE 0.4798343408158256
     # Test data R-squared 0.07322245271238681
 
-    # By comparing RMSE and R-squared, the best performing model is Random Forest with the highest R
-    # square and least RMSE
-    # The Linear Regression model and Ridge Regression model are better with a stable R-squared and RMSE values
+    # By comparing RMSE and R-squared, the best performing model is Random Forest with the highest
+    # R squared and least RMSE
+    # The Linear Regression model is with a better R-squared and RMSE values than the ElasticNet Regression model
     # the ElasticNet Regression model is performing the worst.
 
 
@@ -739,7 +729,7 @@ def main():
 
     database = "baseball"
     user = "root"
-    password = ""  # pragma: allowlist secret
+    password = ""
     server = "localhost"
     port = 3306
     jdbc_url = f"jdbc:mysql://{server}:{port}/{database}?permitMysqlScheme"
@@ -762,21 +752,14 @@ def main():
     # convert spark Df to pandas df
     baseball_df = baseball_spark_df.toPandas()
     baseball_df.dropna()
-    # drop game_id
-    baseball_df = baseball_df.drop(columns=["game_id"])
 
     response_col = "HomeTeamWins"
+    # filter out response with null
     baseball_df = baseball_df[baseball_df[response_col] != ""]
 
     predictor_cols = [x for x in baseball_df.columns if x != response_col]
 
-    if (
-        baseball_df[response_col].dtype == "object"
-        or baseball_df[response_col].dtype == "bool"
-    ):
-        resp_type = "cat"
-    else:
-        resp_type = "cont"
+    resp_type = determin_type(baseball_df, response_col)
 
     pr_df = feature_analy_plot_ranking(
         baseball_df, predictor_cols, response_col, resp_type
