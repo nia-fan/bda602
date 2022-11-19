@@ -5,7 +5,3 @@ scikit-learn
 pyspark
 pyspark-stubs
 findspark
-statsmodels
-seaborn
-scipy
-webbrowser
