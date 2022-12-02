@@ -9,7 +9,7 @@ services:
         - MYSQL_ROOT_PASSWORD=xxxx
         - TZ=America/Los_Angeles
         - MYSQL_USER=root
-        - MYSQL_PASSWORD=mypass22
+        - MYSQL_PASSWORD=xxxx
         volumes:
         - ./db_data:/config
         ports:
