@@ -1,19 +1,21 @@
-FROM mariadb:latest
-
+FROM python:3.6.9
+		
 ENV APP_HOME /hw6	
 WORKDIR $APP_HOME
+ENV PYTHONPATH /
+	
+# Get necessary system packages
+RUN apt-get update \
+  && apt-get install --no-install-recommends --yes \
+     build-essential \
+     python3 \
+     python3-pip \
+     python3-dev \
+     mariadb-client \
+  && rm -rf /var/lib/apt/lists/*
+	
+COPY baseball.sql .
+COPY hw6.sql .
+COPY startbash.sh .
 
-COPY baseball.sql /docker-entrypoint-initdb.d/
-COPY baseball.sql /
-COPY hw6.sql /
-COPY startbash.sh /
-
-ENV MYSQL_ROOT_PASSWORD mypass22
-ENV MYSQL_DATABASE mariadb
-ENV MYSQL_USER root
-ENV MYSQL_PASSWORD xxxx
-
-# EXPOSE 3306
-EXPOSE 3306
-
-CMD ["/startbash.sh"]
+CMD ["./startbash.sh"]

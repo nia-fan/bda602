@@ -10,10 +10,9 @@ SELECT bc.batter,
 FROM   batter_counts bc 
 where bc.game_id = 12560;
 
-
--- Join the table batter_counts and game based on game_id and group by batter and local_date
+-- -- Join the table batter_counts and game based on game_id and group by batter and local_date
 DROP TABLE IF EXISTS batting_game_join;
-CREATE temporary TABLE batting_game_join
+CREATE TABLE batting_game_join
 select bc.batter,
 	bc.game_id,
 	bc.team_id,
@@ -28,9 +27,9 @@ order by bc.batter, DATE(g.local_date) desc;
 
 CREATE INDEX batter_game_index ON batting_game_join(batter, game_id);
 
--- batter_avg 100 day rolling
-DROP TABLE IF EXISTS batting_avg_rolling_100_days;
-CREATE TABLE batting_avg_rolling_100_days
+-- rolling BA for 100days
+DROP TABLE IF EXISTS rolling_avg_100_days;
+CREATE TABLE rolling_avg_100_days
 SELECT
    bg1.game_id, 
    bg1.team_id,
@@ -43,5 +42,14 @@ SELECT
 FROM batting_game_join AS bg1
 ORDER BY bg1.local_date desc;
 
-CREATE INDEX batting_avg_rolling_100_days_index ON batting_avg_rolling_100_days(batter, game_id, team_id);
+-- rolling BA for all the players in game_id = 12560
+DROP TABLE IF EXISTS ba_game_12560_rolling;
+CREATE TABLE ba_game_12560_rolling
+SELECT batter, 
+       team_id, 
+       game_id,
+       last_100_days_ba
+FROM   rolling_avg_100_days
+WHERE game_id = 12560;
+
 
