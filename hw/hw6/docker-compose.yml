@@ -1,0 +1,35 @@
+version: "3.7"
+services:
+    mariadb:
+        image: lscr.io/linuxserver/mariadb:latest
+        container_name: mariadb
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - MYSQL_ROOT_PASSWORD=xxxx
+        - TZ=America/Los_Angeles
+        - MYSQL_USER=root
+        - MYSQL_PASSWORD=xxxx
+        volumes:
+        - ./db_data:/config
+        ports:
+        - 3306:3306
+        restart: unless-stopped
+       
+    start_proj:
+        container_name: "start_proj"
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "3307:3307"
+        volumes:
+            - ./results:/results
+            - ./startbash.sh:/startbash
+            - ./hw6.sql:/hw6.sql
+        depends_on:
+            - mariadb
+        
+volumes:
+  db_data:
+
