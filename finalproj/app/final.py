@@ -686,7 +686,7 @@ def main():
     # baseball_df = baseball_df.drop(columns=["away_Strikeout_rolling","home_Strikeout_rolling","away_FieldError_rolling","home_FieldError_rolling"])
     # # 3. drop foloowing features with low random forest ranking
     # baseball_df = baseball_df.drop(columns=["away_TOB_rolling","home_TOB_rolling","away_TB_rolling","away_WHIP_rolling","away_OBP_rolling","home_TB_rolling"])
-    # # 4. drop features with negative t-score
+    # # 4. drop foloowing features with low random forest ranking
     # baseball_df = baseball_df.drop(columns=["home_WHIP_rolling","home_wOBA_rolling","home_HR_H_rolling","away_RDIFF_rolling","away_HR_H_rolling","home_K9_rolling"])
 
     # 5 drop features based on correlation > 90% and lower random forest ranking
